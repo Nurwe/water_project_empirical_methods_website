@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Water Scarcity and Growth", page_icon="💧", layout="wide")
 
@@ -11,16 +12,29 @@ st.set_page_config(page_title="Water Scarcity and Growth", page_icon="💧", lay
 st.markdown(f"<style>{(Path(__file__).parent / 'style.css').read_text()}</style>", unsafe_allow_html=True)
 
 REPO_URL = "https://github.com/Nurwe/water_project_empirical_methods_website"
+SITE_URL = "https://water-project-empirical-methods.streamlit.app/"
 
 # Chart style shared by all Plotly figures
 FONT = "Inter, system-ui, sans-serif"
 NAVY = "#0b2545"
 
-# Demo variables and their colour scales (replace with the real data later)
+# Demo variables: colour scale, unit (colour-bar title), what low/high values mean,
+# and a one-line definition shown under the map. Replace with the real data later.
 DEMO_VARIABLES = {
-    "Water scarcity (demo)": "OrRd",
-    "GDP growth (demo)": "RdBu",
-    "Rainfall anomaly (demo)": "BrBG",
+    "Water scarcity (demo)": dict(
+        scale="OrRd", unit="% of renewable<br>water withdrawn",
+        low="no stress", high="all renewable water used",
+        definition="Water withdrawals as a share of the country's renewable freshwater "
+                   "resources. 0 = no water used, 100 = withdrawals equal all renewable water."),
+    "GDP growth (demo)": dict(
+        scale="RdBu", unit="% per year",
+        low="shrinking", high="growing",
+        definition="Annual growth of real GDP per capita, in percent."),
+    "Rainfall anomaly (demo)": dict(
+        scale="BrBG", unit="SD from<br>1961–90 normal",
+        low="drier than normal", high="wetter than normal",
+        definition="Rainfall in the year compared with the country's 1961–90 average, in "
+                   "standard deviations. 0 = a normal year, −1 or lower = drought."),
 }
 
 
@@ -55,6 +69,32 @@ def section(eyebrow, title, lead=None):
 def placeholder(text):
     st.markdown(f'<p class="placeholder">{text}</p>', unsafe_allow_html=True)
 
+
+# "Copy link" button, drawn on top of the banner's top-right corner (see .st-key-share in style.css)
+with st.container(key="share"):
+    components.html(
+        f"""
+        <button id="b" onclick="copy()">🔗 Copy link</button>
+        <script>
+          function copy() {{
+            const url = "{SITE_URL}", b = document.getElementById("b");
+            const done = () => {{ b.textContent = "✓ Link copied"; setTimeout(() => b.textContent = "🔗 Copy link", 2000); }};
+            // Fallback for browsers/iframes that block the clipboard API
+            const old = () => {{ const t = document.createElement("textarea"); t.value = url;
+              document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); done(); }};
+            navigator.clipboard ? navigator.clipboard.writeText(url).then(done, old) : old();
+          }}
+        </script>
+        <style>
+          body {{ margin: 0; display: flex; justify-content: flex-end; background: transparent; }}
+          button {{ font: 500 13px Inter, system-ui, sans-serif; color: #fff; cursor: pointer;
+                    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.35);
+                    border-radius: 999px; padding: 6px 14px; }}
+          button:hover {{ background: rgba(255,255,255,0.22); }}
+        </style>
+        """,
+        height=36,
+    )
 
 # --- Header banner ---
 st.markdown(
@@ -110,8 +150,18 @@ with tab_data:
     demo = demo_panel()
     variable = st.selectbox("Variable", list(DEMO_VARIABLES))
 
-    # Animated map: play button + year slider under the map.
+    info = DEMO_VARIABLES[variable]
     # Colour range fixed over all years so changes over time are visible.
+    lo, hi = demo[variable].min(), demo[variable].max()
+    if info["scale"] in ("RdBu", "BrBG"):  # diverging: centre the colours on 0
+        lo, hi = -max(abs(lo), abs(hi)), max(abs(lo), abs(hi))
+    # Colour-bar ticks: numbers in between, meaning written at both ends
+    ticks = np.linspace(lo, hi, 5)
+    tick_text = [f"{t:.0f}" if abs(hi) >= 10 else f"{t:.1f}" for t in ticks]
+    tick_text[0] += f" · {info['low']}"
+    tick_text[-1] += f" · {info['high']}"
+
+    # Animated map: play button + year slider under the map.
     fig = px.choropleth(
         demo.sort_values("year"),
         locations="iso3",
@@ -119,8 +169,8 @@ with tab_data:
         animation_frame="year",
         hover_name="country",
         hover_data={"iso3": False, "year": False, **{v: ":.2f" for v in DEMO_VARIABLES}},
-        color_continuous_scale=DEMO_VARIABLES[variable],
-        range_color=(demo[variable].min(), demo[variable].max()),
+        color_continuous_scale=info["scale"],
+        range_color=(lo, hi),
         projection="natural earth",
     )
     # Speed: 0.5 s per year, no morphing between years
@@ -137,11 +187,16 @@ with tab_data:
         margin=dict(l=0, r=0, t=10, b=0), height=560, dragmode=False,
         font=dict(family=FONT, color="#1b2a3a"),
         hoverlabel=dict(bgcolor="white", bordercolor="#d5dde5", font=dict(family=FONT, size=13)),
-        coloraxis_colorbar=dict(title="", thickness=12, len=0.6, outlinewidth=0),
+        coloraxis_colorbar=dict(
+            # Unit on top; the empty line keeps it clear of the top tick label
+            title=dict(text=info["unit"] + "<br>&nbsp;", side="top", font=dict(size=12)),
+            tickvals=ticks, ticktext=tick_text, thickness=12, len=0.75, outlinewidth=0,
+        ),
     )
     with st.container(border=True):
         st.plotly_chart(fig, use_container_width=True, key="world_map",
                         config={"scrollZoom": False, "displayModeBar": False})
+        st.caption(f"**{variable.replace(' (demo)', '')}:** {info['definition']}")
 
     # Country details: pick a country from the list
     section("By country", "Country details")

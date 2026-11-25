@@ -141,3 +141,14 @@ header[data-testid="stHeader"] { background: transparent; }
   font-size: 0.85rem;
 }
 .footer a { color: var(--blue); text-decoration: none; }
+
+/* "Copy link" button: sits above the banner in the code, pulled down onto its top-right corner */
+.st-key-share {
+  position: relative;
+  z-index: 2;
+  height: 36px;
+  margin-bottom: calc(-36px - 1rem);  /* cancel its own height + the gap, so the banner moves up under it */
+  top: 1.4rem;
+  padding-right: 1.6rem;
+}
+.st-key-share iframe { background: transparent; }
