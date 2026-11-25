@@ -178,3 +178,25 @@ header[data-testid="stHeader"] { background: transparent; }
   padding-right: 1.6rem;
 }
 .st-key-share iframe { background: transparent; }
+
+/* Map colour legend (HTML, above the map) */
+.legend { max-width: 420px; margin: 0.2rem 0 0.6rem auto; font-size: 0.8rem; color: var(--muted); }
+.legend-unit { font-weight: 600; color: var(--ink); margin-bottom: 0.3rem; }
+.legend-bar { height: 10px; border-radius: 5px; }
+.legend-nums, .legend-ends { display: flex; justify-content: space-between; margin-top: 0.2rem; }
+.legend-ends { font-size: 0.75rem; }
+
+/* ---------- Phones and narrow windows ---------- */
+@media (max-width: 640px) {
+  .block-container, [data-testid="stMainBlockContainer"] { padding-left: 1rem; padding-right: 1rem; }
+  .hero { padding: 1.6rem 1.3rem 2.8rem; border-radius: 12px; }
+  .hero h1 { font-size: 1.9rem !important; }
+  .hero .sub { font-size: 0.98rem; }
+  .hero .kicker { padding-right: 6.5rem; }  /* keep clear of the Copy link button */
+  .st-key-share { padding-right: 0.8rem; top: 1rem; }
+  /* Tabs: smaller gaps so all four fit */
+  .stTabs [role="tablist"] { gap: 0.6rem; }
+  .stTabs [role="tab"] p { font-size: 0.86rem !important; }
+  .legend { max-width: none; margin-left: 0; }
+}
+

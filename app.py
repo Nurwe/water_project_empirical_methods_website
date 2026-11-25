@@ -79,6 +79,21 @@ def no_data_layer(df, variable):
     )
 
 
+def map_legend(info, lo, hi):
+    """Colour legend as HTML: gradient bar, numbers, and what the two ends mean.
+    HTML wraps on small screens, unlike Plotly's built-in colour bar."""
+    colors = px.colors.sample_colorscale(px.colors.get_colorscale(info["scale"]), list(np.linspace(0, 1, 7)))
+    ticks = np.linspace(lo, hi, 5)
+    nums = "".join(f"<span>{t:.0f}</span>" if abs(hi) >= 10 else f"<span>{t:.1f}</span>" for t in ticks)
+    return f"""
+    <div class="legend">
+      <div class="legend-unit">{info['unit'].replace('<br>', ' ')}</div>
+      <div class="legend-bar" style="background: linear-gradient(to right, {', '.join(colors)});"></div>
+      <div class="legend-nums">{nums}</div>
+      <div class="legend-ends"><span>← {info['low']}</span><span>{info['high']} →</span></div>
+    </div>"""
+
+
 def section(eyebrow, title, lead=None):
     """Small coloured label, heading and optional intro line."""
     st.markdown(f'<div class="eyebrow">{eyebrow}</div>', unsafe_allow_html=True)
@@ -182,11 +197,6 @@ with tab_data:
     lo, hi = demo[variable].min(), demo[variable].max()
     if info["scale"] in ("RdBu", "BrBG"):  # diverging: centre the colours on 0
         lo, hi = -max(abs(lo), abs(hi)), max(abs(lo), abs(hi))
-    # Colour-bar ticks: numbers in between, meaning written at both ends
-    ticks = np.linspace(lo, hi, 5)
-    tick_text = [f"{t:.0f}" if abs(hi) >= 10 else f"{t:.1f}" for t in ticks]
-    tick_text[0] += f" · {info['low']}"
-    tick_text[-1] += f" · {info['high']}"
 
     # Animated map: play button + year slider under the map.
     fig = px.choropleth(
@@ -216,19 +226,37 @@ with tab_data:
                     bgcolor="rgba(0,0,0,0)", lataxis_range=[-58, 85])  # cut off Antarctica
     # Static map: no dragging/rotating/zooming, hover only
     fig.update_layout(
-        margin=dict(l=0, r=0, t=10, b=0), height=560, dragmode=False,
+        margin=dict(l=0, r=0, t=0, b=0), height=520, dragmode=False,  # height adjusted to screen width below
         font=dict(family=FONT, color="#1b2a3a"),
         hoverlabel=dict(bgcolor="white", bordercolor="#d5dde5", font=dict(family=FONT, size=13)),
-        coloraxis_colorbar=dict(
-            # Unit on top; the empty line keeps it clear of the top tick label
-            title=dict(text=info["unit"] + "<br>&nbsp;", side="top", font=dict(size=12)),
-            tickvals=ticks, ticktext=tick_text, thickness=12, len=0.75, outlinewidth=0,
-        ),
+        coloraxis_showscale=False,  # legend is drawn in HTML above the map (fits phones too)
     )
-    with st.container(border=True):
+    with st.container(border=True, key="world_map_card"):
+        st.markdown(map_legend(info, lo, hi), unsafe_allow_html=True)
         st.plotly_chart(fig, use_container_width=True, key="world_map",
-                        config={"scrollZoom": False, "displayModeBar": False})
+                        config={"scrollZoom": False, "displayModeBar": False, "responsive": True})
         st.caption(f"**{variable.replace(' (demo)', '')}:** {info['definition']}")
+    # Fit the map's height to its width (otherwise phones get a tiny map with empty space around it).
+    # Runs in the page: map height = half its width + room for the play button/slider, max 520 px.
+    components.html(
+        """<script>
+        const P = window.parent, doc = P.document;
+        // Timer runs on the page (not this hidden frame, which browsers slow down); started only once
+        if (!P.__mapFit) P.__mapFit = P.setInterval(() => {
+          const gd = doc.querySelector('.st-key-world_map_card .js-plotly-plot');
+          if (!gd || !gd.layout || !P.Plotly || gd.offsetWidth === 0) return;
+          const h = Math.min(520, Math.round(gd.offsetWidth * 0.5 + 110));
+          // Streamlit's wrappers keep their own height, so resize them too
+          for (const sel of ['[data-testid="stPlotlyChart"]', '[data-testid="stFullScreenFrame"]',
+                             '[data-testid="stElementContainer"]']) {
+            const box = gd.closest(sel);
+            if (box && box.style.height !== h + 'px') { box.style.height = h + 'px'; box.style.flexBasis = h + 'px'; }
+          }
+          if (Math.abs((gd.layout.height || 0) - h) > 4) P.Plotly.relayout(gd, {height: h});
+        }, 300);
+        </script>""",
+        height=0,
+    )
 
     # Country details: pick a country from the list
     section("By country", "Country details")
