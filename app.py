@@ -3,6 +3,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+import pycountry
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -57,6 +59,24 @@ def demo_panel():
                 "Rainfall anomaly (demo)": rng.normal(0, 1),
             })
     return pd.DataFrame(rows)
+
+
+@st.cache_data
+def world_countries():
+    """All countries (ISO3 code -> short name), to show 'No data' on the map."""
+    return {c.alpha_3: getattr(c, "common_name", c.name) for c in pycountry.countries}
+
+
+def no_data_layer(df, variable):
+    """Grey map layer for countries without a value: hover shows the name and 'No data'."""
+    have = set(df.loc[df[variable].notna(), "iso3"])
+    missing = {k: v for k, v in world_countries().items() if k not in have}
+    return go.Choropleth(
+        locations=list(missing), z=[0] * len(missing), text=list(missing.values()),
+        colorscale=[[0, "#e3e8ed"], [1, "#e3e8ed"]], showscale=False,
+        marker_line_color="#ffffff", marker_line_width=0.4,
+        hovertemplate="<b>%{text}</b><br>No data<extra></extra>",
+    )
 
 
 def section(eyebrow, title, lead=None):
@@ -180,6 +200,11 @@ with tab_data:
         range_color=(lo, hi),
         projection="natural earth",
     )
+    # Grey 'No data' layer for each year (countries missing that year get a hover label too)
+    years = sorted(demo["year"].unique())
+    fig.add_trace(no_data_layer(demo[demo["year"] == years[0]], variable))
+    for frame in fig.frames:
+        frame.data = (frame.data[0], no_data_layer(demo[demo["year"] == int(frame.name)], variable))
     # Speed: 0.5 s per year, no morphing between years
     play = fig.layout.updatemenus[0].buttons[0].args[1]
     play["frame"]["duration"] = 500
