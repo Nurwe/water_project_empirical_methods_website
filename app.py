@@ -13,6 +13,7 @@ st.markdown(f"<style>{(Path(__file__).parent / 'style.css').read_text()}</style>
 
 REPO_URL = "https://github.com/Nurwe/water_project_empirical_methods_website"
 SITE_URL = "https://water-project-empirical-methods.streamlit.app/"
+PAPER_URL = "https://www.bis.org/publications/working-paper-1314-economics-water-scarcity"
 
 # Chart style shared by all Plotly figures
 FONT = "Inter, system-ui, sans-serif"
@@ -98,12 +99,18 @@ with st.container(key="share"):
 
 # --- Header banner ---
 st.markdown(
-    """
+    f"""
     <div class="hero">
       <div class="kicker">Empirical Methods · UZH · Fall 2026</div>
       <h1>Water Scarcity and Economic Growth</h1>
       <p class="sub">A replication and extension: does water scarcity slow down growth,
       and what do weather shocks tell us about it?</p>
+      <div class="paper">
+        <span class="label">Paper</span>
+        <a href="{PAPER_URL}" target="_blank" rel="noopener"><i>The economics of water scarcity</i> ↗</a>
+        · Jon Frost, Carlos Madeira and
+        Serafín Martínez Jaramillo · BIS Working Papers No 1314, December 2025
+      </div>
       <div class="summary"><b>In short:</b> placeholder for the summary – research question,
       method and main findings in three or four sentences.</div>
       <svg class="wave" viewBox="0 0 1200 46" preserveAspectRatio="none">
