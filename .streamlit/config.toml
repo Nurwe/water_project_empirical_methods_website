@@ -1,0 +1,10 @@
+[theme]
+# Fixed light theme for every visitor (decision 25.11), regardless of their system setting.
+base = "light"
+primaryColor = "#1d6fa5"            # water blue: buttons, sliders, active tab
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f3f6f9" # inputs, cards
+textColor = "#1b2a3a"
+
+[client]
+toolbarMode = "viewer"  # hide the developer "Deploy" button for visitors
